@@ -1,0 +1,725 @@
+  <!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confraria Crypto - Dashboard Estratégico</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <style>
+        /* Custom styles for the dashboard */
+        body {
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Dark Mode (default) */
+        .dark body {
+            background-color: #0A0A0A;
+            color: #E0E0E0;
+            background-image: 
+                radial-gradient(circle at 25px 25px, rgba(255, 215, 0, 0.03) 2%, transparent 0%),
+                radial-gradient(circle at 75px 75px, rgba(255, 215, 0, 0.03) 2%, transparent 0%);
+            background-size: 100px 100px;
+        }
+        .dark .card { background-color: #1E1E1E; border: 1px solid #2d2d2d; }
+        .dark .value-input { background-color: #374151; border: 1px solid #4b5563; color: white; }
+        .dark .profile-btn { background-color: #374151; color: #d1d5db; }
+        .dark .profile-btn:hover { background-color: #4b5563; }
+        .dark .profile-btn.active { background-color: #FFD700; color: #1E1E1E; }
+        .dark .modal-overlay { background-color: rgba(0,0,0,0.85); }
+        .dark .deviation-positive { color: #22c55e; }
+        .dark .deviation-negative { color: #ef4444; }
+        .dark .rebalance-alert-box { background-color: #ef444420; border-color: #ef444480; }
+        .dark .rebalance-alert-text { color: #fca5a5; }
+        .dark .rebalance-alert-header { color: #f87171; }
+
+        /* Light Mode */
+        body { background-color: #f3f4f6; color: #1f2937; }
+        .card { background-color: #ffffff; border: 1px solid #e5e7eb; transition: background-color 0.3s; }
+        .value-input { background-color: #e5e7eb; border: 1px solid #d1d5db; color: #1f2937; }
+        .profile-btn { background-color: #e5e7eb; color: #4b5563; }
+        .profile-btn:hover { background-color: #d1d5db; }
+        .profile-btn.active { background-color: #1f2937; color: #ffffff; }
+        .modal-overlay { background-color: rgba(255,255,255,0.85); }
+        .deviation-positive { color: #166534; }
+        .deviation-negative { color: #b91c1c; }
+        .rebalance-alert-box { background-color: #fee2e2; border-color: #fca5a5; }
+        .rebalance-alert-text { color: #991b1b; }
+        .rebalance-alert-header { color: #b91c1c; }
+
+        .gold-accent { color: #FFD700; }
+        .value-input::-webkit-inner-spin-button, .value-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .status-green { color: #22c55e; }
+        .status-yellow { color: #eab308; }
+        .status-red { color: #ef4444; }
+    </style>
+</head>
+<body>
+    
+    <!-- Modals -->
+    <div id="welcomeModal" class="modal-overlay fixed inset-0 flex items-center justify-center z-50 hidden">
+        <div class="card p-8 rounded-lg w-full max-w-md text-center">
+            <h2 class="text-3xl font-bold mb-4">Bem-vindo à Confraria!</h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">Para começar, por favor, nos diga seu nome.</p>
+            <form id="welcomeForm">
+                <input type="text" id="userNameInput" required placeholder="Digite seu nome aqui" class="value-input w-full p-3 rounded-md text-center text-lg">
+                <button type="submit" class="mt-6 w-full py-3 rounded-md bg-yellow-600 text-black font-bold hover:bg-yellow-500">Continuar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay fixed inset-0 hidden items-center justify-center z-50">
+         <div class="card p-8 rounded-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6" data-lang="settings">Configurações</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="nameSetting" class="block text-sm font-medium text-gray-500 dark:text-gray-300 mb-1" data-lang="yourName">Seu Nome</label>
+                    <input type="text" id="nameSetting" class="value-input w-full p-2 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-300 mb-1" data-lang="theme">Tema</label>
+                    <div class="flex gap-2 rounded-md bg-gray-200 dark:bg-gray-700 p-1">
+                        <button class="theme-btn flex-1 py-1 rounded" data-theme="light" data-lang="light">Claro</button>
+                        <button class="theme-btn flex-1 py-1 rounded" data-theme="dark" data-lang="dark">Escuro</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="currencySetting" class="block text-sm font-medium text-gray-500 dark:text-gray-300 mb-1" data-lang="currency">Moeda</label>
+                    <select id="currencySetting" class="value-input w-full p-2 rounded-md"></select>
+                </div>
+                <div>
+                    <label for="languageSetting" class="block text-sm font-medium text-gray-500 dark:text-gray-300 mb-1" data-lang="language">Idioma</label>
+                    <select id="languageSetting" class="value-input w-full p-2 rounded-md"></select>
+                </div>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="closeSettings" class="px-4 py-2 rounded-md bg-yellow-600 text-black font-bold hover:bg-yellow-500" data-lang="close">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="app-container" class="max-w-7xl mx-auto hidden p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <div class="flex items-center gap-4 mb-4 sm:mb-0">
+                <img src="https://i.imgur.com/iZa1xgc.png" alt="Logo Confraria Crypto" class="w-14 h-14">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wider">Confraria Crypto</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" data-lang="dashboardSubtitle">Dashboard - Gerenciamento de Banca</p>
+                </div>
+            </div>
+            <div id="header-summary" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-right w-full sm:w-auto">
+                <!-- Populated by JS -->
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex flex-col gap-8">
+            <div>
+                <h2 id="welcome-message" class="text-3xl font-bold"></h2>
+                <p class="text-gray-500 dark:text-gray-400" data-lang="welcomeSubtitle">Visão geral da sua carteira de criptomoedas</p>
+            </div>
+
+            <!-- Top Row: Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card p-6 flex flex-col">
+                    <h2 class="text-xl font-semibold mb-4" data-lang="bankDistribution">Distribuição da Banca</h2>
+                    <div class="relative flex-grow flex items-center justify-center min-h-[300px]"><canvas id="currentAllocationChart"></canvas></div>
+                    <div id="current-legend" class="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4 text-sm"></div>
+                </div>
+                <div class="card p-6 flex flex-col">
+                    <h2 class="text-xl font-semibold mb-4" data-lang="idealStrategy">Estratégia Ideal</h2>
+                    <div class="relative flex-grow flex items-center justify-center min-h-[300px]"><canvas id="idealAllocationChart"></canvas></div>
+                    <div id="ideal-legend" class="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Panels -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 flex flex-col">
+                    <div class="card p-6 h-full">
+                        <h2 class="text-xl font-semibold mb-6" data-lang="myAllocation">Minha Alocação (USD)</h2>
+                        <div id="currentValues" class="space-y-4"></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 flex flex-col">
+                    <div class="card p-6 h-full">
+                        <h2 class="text-xl font-semibold mb-4" data-lang="editIdealStrategy">Editar Estratégia Ideal</h2>
+                        <div class="flex gap-2 mb-6 border-b border-gray-300 dark:border-gray-700 pb-4">
+                            <button class="profile-btn flex-1 py-2 px-3 text-sm rounded-md" data-profile="conservative" data-lang="conservative">Conservador</button>
+                            <button class="profile-btn flex-1 py-2 px-3 text-sm rounded-md" data-profile="moderate" data-lang="moderate">Moderado</button>
+                            <button class="profile-btn flex-1 py-2 px-3 text-sm rounded-md" data-profile="aggressive" data-lang="aggressive">Agressivo</button>
+                            <button class="profile-btn flex-1 py-2 px-3 text-sm rounded-md active" data-profile="custom" data-lang="custom">Personalizado</button>
+                        </div>
+                        <div id="idealStrategy" class="space-y-4"></div>
+                        <div id="rebalanceWarningContainer" class="mt-6"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer class="flex justify-between items-center mt-8 text-gray-500 text-xs">
+            <button id="settings-btn" class="cursor-pointer p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i data-lucide="settings"></i>
+            </button>
+            <div class="text-right">
+                <p><span data-lang="userID">ID do Usuário</span>: <span id="userID-display" class="font-mono"></span></p>
+                <button id="reset-data" class="hover:text-yellow-400 underline mt-2" data-lang="resetData">Resetar Dados e Criar Novo Usuário</button>
+            </div>
+        </footer>
+    </div>
+    
+    <script>
+        // --- DATA & CONFIG ---
+        const allocationTypes = {
+            HOLD: { label: 'Hold', color: '#22c55e' }, TRADE: { label: 'Trade', color: '#eab308' },
+            DEFI: { label: 'DeFi', color: '#3b82f6' }, GEMAS: { label: 'Gemas', color: '#8b5cf6' },
+            CAIXA: { label: 'Caixa', color: '#6b7280' }, DERIVATIVOS: { label: 'Derivativos', color: '#ef4444' }
+        };
+
+        const riskProfiles = {
+            conservative: { HOLD: 70, TRADE: 20, DEFI: 5, GEMAS: 5, CAIXA: 0, DERIVATIVOS: 0 },
+            moderate: { HOLD: 50, TRADE: 30, DEFI: 15, GEMAS: 5, CAIXA: 0, DERIVATIVOS: 0 },
+            aggressive: { HOLD: 30, TRADE: 40, DEFI: 20, GEMAS: 10, CAIXA: 0, DERIVATIVOS: 0 },
+            custom: {}
+        };
+        
+        const currencies = {
+            USD: { symbol: '$', locale: 'en-US' },
+            BRL: { symbol: 'R$', locale: 'pt-BR' },
+            EUR: { symbol: '€', locale: 'de-DE' }
+        };
+
+        let currentAllocationValues = {};
+        let idealStrategyData = {};
+        let currentProfile = 'custom';
+        let currentAllocationChart, idealAllocationChart;
+        let userID = null;
+        let settings = {};
+        let exchangeRates = { USD: 1 };
+
+        // --- DOM ELEMENTS ---
+        const $ = (id) => document.getElementById(id);
+        
+        // --- TRANSLATIONS ---
+        const translations = {
+            pt: {
+                welcomeBack: "Bem-vindo de volta",
+                dashboardSubtitle: "Dashboard - Gerenciamento de Banca",
+                welcomeSubtitle: "Visão geral da sua carteira de criptomoedas",
+                bankDistribution: "Distribuição da Banca",
+                idealStrategy: "Estratégia Ideal",
+                myAllocation: "Minha Alocação",
+                editIdealStrategy: "Editar Estratégia Ideal",
+                conservative: "Conservador",
+                moderate: "Moderado",
+                aggressive: "Agressivo",
+                custom: "Personalizado",
+                rebalanceAlert: "ALERTA DE REBALANCEAMENTO",
+                offTarget: "fora da meta",
+                totalBank: "Total da Banca",
+                strategyStatus: "Status da Estratégia",
+                unbalanced: "desbalanceadas",
+                onTarget: "na meta",
+                settings: "Configurações",
+                yourName: "Seu Nome",
+                theme: "Tema",
+                light: "Claro",
+                dark: "Escuro",
+                currency: "Moeda",
+                language: "Idioma",
+                close: "Fechar",
+                userID: "ID do Usuário",
+                resetData: "Resetar Dados e Criar Novo Usuário"
+            },
+            en: {
+                welcomeBack: "Welcome back",
+                dashboardSubtitle: "Dashboard - Portfolio Management",
+                welcomeSubtitle: "Overview of your crypto portfolio",
+                bankDistribution: "Portfolio Distribution",
+                idealStrategy: "Ideal Strategy",
+                myAllocation: "My Allocation",
+                editIdealStrategy: "Edit Ideal Strategy",
+                conservative: "Conservative",
+                moderate: "Moderate",
+                aggressive: "Aggressive",
+                custom: "Custom",
+                rebalanceAlert: "REBALANCE ALERT",
+                offTarget: "off target",
+                totalBank: "Total Portfolio",
+                strategyStatus: "Strategy Status",
+                unbalanced: "unbalanced",
+                onTarget: "on target",
+                settings: "Settings",
+                yourName: "Your Name",
+                theme: "Theme",
+                light: "Light",
+                dark: "Dark",
+                currency: "Currency",
+                language: "Language",
+                close: "Close",
+                userID: "User ID",
+                resetData: "Reset Data and Create New User"
+            },
+            es: {
+                welcomeBack: "Bienvenido de nuevo",
+                dashboardSubtitle: "Dashboard - Gestión de Cartera",
+                welcomeSubtitle: "Resumen de su cartera de criptomonedas",
+                bankDistribution: "Distribución de la Cartera",
+                idealStrategy: "Estrategia Ideal",
+                myAllocation: "Mi Asignación",
+                editIdealStrategy: "Editar Estrategia Ideal",
+                conservative: "Conservador",
+                moderate: "Moderado",
+                aggressive: "Agresivo",
+                custom: "Personalizado",
+                rebalanceAlert: "ALERTA DE REBALANCEO",
+                offTarget: "fuera del objetivo",
+                totalBank: "Cartera Total",
+                strategyStatus: "Estado de la Estrategia",
+                unbalanced: "desbalanceadas",
+                onTarget: "en meta",
+                settings: "Configuración",
+                yourName: "Su Nombre",
+                theme: "Tema",
+                light: "Claro",
+                dark: "Oscuro",
+                currency: "Moneda",
+                language: "Idioma",
+                close: "Cerrar",
+                userID: "ID de Usuario",
+                resetData: "Restablecer Datos y Crear Nuevo Usuario"
+            }
+        };
+
+        const profileTranslations = {
+            pt: { conservative: 'Conservador', moderate: 'Moderado', aggressive: 'Agressivo', custom: 'Personalizado' },
+            en: { conservative: 'Conservative', moderate: 'Moderate', aggressive: 'Aggressive', custom: 'Custom' },
+            es: { conservative: 'Conservador', moderate: 'Moderado', aggressive: 'Agresivo', custom: 'Personalizado' }
+        };
+
+        // --- USER & LOCAL STORAGE ---
+        const initializeUser = () => {
+            userID = localStorage.getItem('confraria_userID');
+            if (!userID) {
+                userID = crypto.randomUUID();
+                localStorage.setItem('confraria_userID', userID);
+            }
+            $('userID-display').textContent = userID;
+        };
+
+        const saveState = () => {
+            if (!userID) return;
+            localStorage.setItem(`settings_${userID}`, JSON.stringify(settings));
+            localStorage.setItem(`currentAllocationValues_${userID}`, JSON.stringify(currentAllocationValues));
+            localStorage.setItem(`cryptoStrategy_${userID}`, JSON.stringify(idealStrategyData));
+            localStorage.setItem(`cryptoProfile_${userID}`, currentProfile);
+        };
+
+        const loadState = () => {
+            if (!userID) return;
+            const savedSettings = localStorage.getItem(`settings_${userID}`);
+            const savedValues = localStorage.getItem(`currentAllocationValues_${userID}`);
+            const savedStrategy = localStorage.getItem(`cryptoStrategy_${userID}`);
+            const savedProfile = localStorage.getItem(`cryptoProfile_${userID}`);
+            
+            settings = savedSettings ? JSON.parse(savedSettings) : {
+                name: '',
+                theme: 'dark',
+                currency: 'USD',
+                language: 'pt'
+            };
+
+            currentAllocationValues = savedValues ? JSON.parse(savedValues) : { HOLD: 30000, TRADE: 15000, DEFI: 5000, GEMAS: 5000, CAIXA: 10000, DERIVATIVOS: 0 };
+            idealStrategyData = savedStrategy ? JSON.parse(savedStrategy) : { HOLD: 50, TRADE: 25, DEFI: 10, GEMAS: 10, CAIXA: 5, DERIVATIVOS: 0 };
+            currentProfile = savedProfile || 'custom';
+        };
+
+        // --- UTILITY & FORMATTING ---
+        const formatCurrency = (value) => {
+            const rate = exchangeRates[settings.currency] || 1;
+            return new Intl.NumberFormat(currencies[settings.currency].locale, { style: 'currency', currency: settings.currency }).format(value * rate);
+        };
+        const formatPercent = (value, sign = false) => {
+            const formatted = (value || 0).toFixed(1) + '%';
+            if (sign) return value > 0 ? `+${formatted}` : formatted;
+            return formatted;
+        };
+        
+        // --- CORE LOGIC ---
+        const calculateTotalValue = () => Object.values(currentAllocationValues).reduce((sum, val) => sum + (val || 0), 0);
+        
+        const calculateCurrentAllocationPercentages = (totalValue) => {
+            const percentages = {};
+            for (const key in allocationTypes) {
+                percentages[key] = totalValue > 0 ? ((currentAllocationValues[key] || 0) / totalValue) * 100 : 0;
+            }
+            return percentages;
+        };
+
+        const getDeviationStatus = (category, currentAllocationPercentages) => {
+            const current = currentAllocationPercentages[category] || 0;
+            const ideal = idealStrategyData[category] || 0;
+            const deviation = current - ideal;
+            
+            if (Math.abs(deviation) <= 2) return { color: 'green', icon: 'check-circle-2' };
+            if (Math.abs(deviation) <= 5) return { color: 'yellow', icon: 'alert-triangle' };
+            return { color: 'red', icon: 'alert-octagon' };
+        };
+
+        // --- RENDER FUNCTIONS ---
+        const renderHeaderSummary = (totalValue, deviations) => {
+            const offTrackCount = deviations.filter(d => d.status.color !== 'green').length;
+            const onTrackCount = Object.keys(idealStrategyData).length - offTrackCount;
+
+            $('header-summary').innerHTML = `
+                <div class="card p-4 text-left">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase" data-lang="totalBank">Total da Banca</p>
+                    <p class="text-2xl font-semibold">${formatCurrency(totalValue)}</p>
+                </div>
+                 <div class="card p-4 text-left">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 uppercase" data-lang="strategyStatus">Status da Estratégia</p>
+                    <div class="text-sm flex items-center gap-4 mt-2">
+                        ${offTrackCount > 0 ? `<span class="flex items-center gap-1 status-yellow"><i data-lucide="alert-triangle" class="w-4 h-4"></i> ${offTrackCount} <span data-lang="unbalanced">desbalanceadas</span></span>` : ''}
+                        ${onTrackCount > 0 ? `<span class="flex items-center gap-1 status-green"><i data-lucide="check-circle-2" class="w-4 h-4"></i> ${onTrackCount} <span data-lang="onTarget">na meta</span></span>` : ''}
+                    </div>
+                </div>`;
+        };
+
+        const renderCurrentValuesEditor = () => {
+            $('currentValues').innerHTML = '';
+            for (const key in allocationTypes) {
+                const element = document.createElement('div');
+                element.innerHTML = `
+                    <label for="current-${key}" class="block text-sm font-medium text-gray-500 dark:text-gray-300 mb-1">${allocationTypes[key].label}</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400">${currencies[settings.currency].symbol}</span>
+                        <input type="number" id="current-${key}" data-key="${key}" value="${(currentAllocationValues[key] || 0)}" class="current-value-input value-input w-full p-2 rounded-md pl-7">
+                    </div>
+                `;
+                $('currentValues').appendChild(element);
+            }
+        };
+
+        const renderIdealStrategyEditor = (currentAllocationPercentages) => {
+            $('idealStrategy').innerHTML = '';
+            Object.keys(idealStrategyData).forEach(key => {
+                const ideal = idealStrategyData[key] || 0;
+                const current = currentAllocationPercentages[key] || 0;
+                const deviation = current - ideal;
+                const status = getDeviationStatus(key, currentAllocationPercentages);
+                const element = document.createElement('div');
+                element.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex-grow">
+                            <span class="font-semibold flex items-center gap-2"><i data-lucide="${status.icon}" class="w-5 h-5 status-${status.color}"></i> ${allocationTypes[key].label}</span>
+                            <div class="text-sm text-gray-500 dark:text-gray-400 pl-7">
+                                <span>Atual: ${formatPercent(current)} / Ideal: ${formatPercent(ideal)}</span>
+                                <span class="${deviation >= 0 ? 'deviation-positive' : 'deviation-negative'}"> (${formatPercent(deviation, true)})</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 relative">
+                             <input type="number" min="0" max="100" value="${ideal}" data-strategy-key="${key}" class="strategy-input value-input w-20 py-1 pr-7 rounded-md">
+                             <span class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">%</span>
+                        </div>
+                    </div>`;
+                $('idealStrategy').appendChild(element);
+            });
+        };
+
+        const renderRebalanceWarning = (deviations) => {
+            const offTrack = deviations.filter(d => d.status.color !== 'green');
+            if (offTrack.length === 0) {
+                $('rebalanceWarningContainer').style.display = 'none';
+                return;
+            }
+            $('rebalanceWarningContainer').style.display = 'block';
+            $('rebalanceWarningContainer').innerHTML = `
+                <div class="rebalance-alert-box p-4 rounded-lg">
+                    <h3 class="font-semibold rebalance-alert-header flex items-center gap-2"><i data-lucide="${offTrack[0].status.icon}" class="w-5 h-5"></i><span data-lang="rebalanceAlert">ALERTA DE REBALANCEAMENTO</span></h3>
+                    <ul class="list-disc list-inside text-sm rebalance-alert-text mt-2">
+                        ${offTrack.map(d => `<li>${d.category.label}: <span class="font-semibold">${formatPercent(d.deviation, true)}</span> <span data-lang="offTarget">fora da meta</span></li>`).join('')}
+                    </ul>
+                </div>`;
+        };
+        
+        const centerTextPlugin = {
+            id: 'centerText',
+            afterDraw: (chart) => {
+                if (chart.config.type !== 'doughnut' || !chart.config.options.plugins.centerText) return;
+                const { ctx } = chart;
+                const centerConfig = chart.config.options.plugins.centerText;
+                const title = centerConfig.title;
+                const text = centerConfig.text;
+                const color = centerConfig.color || '#ffffff';
+                const fontStyle = centerConfig.fontStyle || 'Poppins';
+                
+                ctx.save();
+                const chartArea = chart.chartArea;
+                const centerX = (chartArea.left + chartArea.right) / 2;
+                const centerY = (chartArea.top + chartArea.bottom) / 2;
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.font = `600 12px ${fontStyle}`;
+                ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280';
+                ctx.fillText(title, centerX, centerY - 15);
+
+                ctx.font = `700 24px ${fontStyle}`;
+                ctx.fillStyle = color;
+                ctx.fillText(text, centerX, centerY + 15);
+                
+                ctx.restore();
+            }
+        };
+
+        const createOrUpdateChart = (chartInstance, context, data, type = 'pie', centerText = null) => {
+            let chartData;
+            let pluginsEnabled = true;
+
+            if (data.length === 0) {
+                chartData = { labels: ['Sem dados'], datasets: [{ data: [1], backgroundColor: ['#374151'] }] };
+                pluginsEnabled = false;
+            } else {
+                chartData = { labels: data.map(d => d.label), datasets: [{ data: data.map(d => d.value), backgroundColor: data.map(d => d.color) }] };
+            }
+
+            const options = {
+                responsive: true, maintainAspectRatio: false, cutout: type === 'doughnut' ? '70%' : 0,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: pluginsEnabled, callbacks: { label: (c) => `${c.label}: ${formatPercent(c.parsed)}` } },
+                    datalabels: { 
+                        display: pluginsEnabled, color: '#FFF', font: { weight: 'bold' }, 
+                        formatter: (value, ctx) => {
+                             if (!ctx.chart.data.datasets[0] || !ctx.chart.data.datasets[0].data.length) return '';
+                            const total = ctx.chart.getDatasetMeta(0)?.total ?? 0;
+                            if (total === 0) return '';
+                            const percentage = (value / total * 100);
+                            return percentage > 5 ? formatPercent(percentage) : '';
+                        }
+                    },
+                    centerText: centerText
+                }
+            };
+            if (chartInstance) {
+                chartInstance.data = chartData;
+                chartInstance.options = options;
+                chartInstance.update();
+                return chartInstance;
+            }
+            return new Chart(context, { type: type, data: chartData, options });
+        };
+        
+        const renderChartLegend = (legendId, data) => {
+            const container = $(legendId);
+            container.innerHTML = '';
+            data.forEach(item => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'flex items-center gap-2';
+                legendItem.innerHTML = `<div class="w-3 h-3 rounded-full" style="background-color: ${item.color}"></div><span>${item.label}</span>`;
+                container.appendChild(legendItem);
+            });
+        };
+
+        // --- MAIN UPDATE FUNCTION ---
+        const updateDashboard = () => {
+            const totalValue = calculateTotalValue();
+            const currentAllocationPercentages = calculateCurrentAllocationPercentages(totalValue);
+            const deviations = Object.keys(allocationTypes).map(key => ({
+                category: allocationTypes[key],
+                status: getDeviationStatus(key, currentAllocationPercentages),
+                deviation: (currentAllocationPercentages[key] || 0) - (idealStrategyData[key] || 0)
+            })).sort((a,b) => Math.abs(b.deviation) - Math.abs(a.deviation));
+
+            renderHeaderSummary(totalValue, deviations);
+            renderIdealStrategyEditor(currentAllocationPercentages);
+            renderRebalanceWarning(deviations);
+
+            const chartDataMapper = (data) => Object.entries(data)
+                .filter(([, value]) => value > 0)
+                .map(([key, value]) => ({ label: allocationTypes[key].label, value, color: allocationTypes[key].color }));
+            
+            const currentChartData = chartDataMapper(currentAllocationPercentages);
+            const idealChartData = chartDataMapper(idealStrategyData);
+
+            Chart.register(ChartDataLabels, centerTextPlugin);
+            
+            const currentCenterText = { title: 'Total', text: formatCurrency(totalValue), color: document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#1f2937' };
+            const idealCenterText = { title: 'Perfil', text: profileTranslations[settings.language][currentProfile], color: document.documentElement.classList.contains('dark') ? '#FFFFFF' : '#1f2937' };
+
+            currentAllocationChart = createOrUpdateChart(currentAllocationChart, $('currentAllocationChart').getContext('2d'), currentChartData, 'doughnut', currentCenterText);
+            idealAllocationChart = createOrUpdateChart(idealAllocationChart, $('idealAllocationChart').getContext('2d'), idealChartData, 'doughnut', idealCenterText);
+            
+            renderChartLegend('current-legend', currentChartData);
+            renderChartLegend('ideal-legend', idealChartData);
+
+            lucide.createIcons();
+            saveState();
+        };
+        
+        // --- EVENT HANDLERS ---
+        const handleProfileChange = (profileName) => {
+            currentProfile = profileName;
+            if (profileName !== 'custom') {
+                idealStrategyData = { ...riskProfiles[profileName] };
+            }
+            document.querySelectorAll('.profile-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.profile === profileName));
+            updateDashboard();
+        };
+
+        const handleStrategyInputChange = (key, value, inputElement) => {
+            currentProfile = 'custom';
+            document.querySelectorAll('.profile-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.profile === 'custom'));
+            const otherValuesTotal = Object.keys(idealStrategyData).reduce((sum, k) => (k !== key ? sum + (idealStrategyData[k] || 0) : sum), 0);
+            if (otherValuesTotal + value > 100) {
+                value = 100 - otherValuesTotal;
+                inputElement.value = value.toFixed(0);
+            }
+            idealStrategyData[key] = value;
+            updateDashboard();
+        };
+
+        const handleCurrentValueChange = (key, value) => {
+            currentAllocationValues[key] = value;
+            updateDashboard();
+        };
+        
+        const handleReset = () => {
+            if (confirm('Isso limpará todos os seus dados e criará um novo perfil de usuário. Deseja continuar?')) {
+                localStorage.clear();
+                window.location.reload();
+            }
+        };
+
+        const applyTranslations = (lang) => {
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                const key = el.dataset.lang;
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+            $('welcome-message').textContent = `${translations[lang].welcomeBack}, ${settings.name}!`;
+            updateDashboard();
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeUser();
+            loadState();
+
+            if (!settings.name) {
+                $('welcomeModal').classList.remove('hidden');
+            } else {
+                startApp();
+            }
+
+            $('welcomeForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                settings.name = $('userNameInput').value;
+                $('welcomeModal').classList.add('hidden');
+                startApp();
+            });
+        });
+
+        function startApp() {
+            $('app-container').style.display = 'block';
+            
+            // Setup settings panel
+            const nameSetting = $('nameSetting');
+            nameSetting.value = settings.name;
+            nameSetting.addEventListener('input', (e) => {
+                settings.name = e.target.value;
+                $('welcome-message').textContent = `${translations[settings.language].welcomeBack}, ${settings.name}!`;
+                saveState();
+            });
+
+            const themeButtons = document.querySelectorAll('.theme-btn');
+            themeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    settings.theme = btn.dataset.theme;
+                    document.documentElement.className = settings.theme;
+                    themeButtons.forEach(b => b.classList.remove('profile-btn.active'));
+                    btn.classList.add('profile-btn.active');
+                    updateDashboard();
+                });
+            });
+
+            const currencySelect = $('currencySetting');
+            Object.keys(currencies).forEach(curr => {
+                const option = document.createElement('option');
+                option.value = curr;
+                option.textContent = `${curr} (${currencies[curr].symbol})`;
+                currencySelect.appendChild(option);
+            });
+            currencySelect.value = settings.currency;
+            currencySelect.addEventListener('change', (e) => {
+                settings.currency = e.target.value;
+                renderCurrentValuesEditor(); // Re-render to show new symbol
+                updateDashboard();
+            });
+
+            const languageSelect = $('languageSetting');
+            const languages = { pt: '🇧🇷 Português', en: '🇺🇸 English', es: '🇪🇸 Español' };
+            Object.keys(languages).forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang;
+                option.textContent = languages[lang];
+                languageSelect.appendChild(option);
+            });
+            languageSelect.value = settings.language;
+            languageSelect.addEventListener('change', (e) => {
+                settings.language = e.target.value;
+                applyTranslations(settings.language);
+            });
+
+            $('settings-btn').addEventListener('click', () => $('settingsModal').classList.remove('hidden'));
+            $('closeSettings').addEventListener('click', () => $('settingsModal').classList.add('hidden'));
+            $('settingsModal').addEventListener('click', (e) => {
+                if(e.target === $('settingsModal')) $('settingsModal').classList.add('hidden');
+            });
+            
+            document.documentElement.className = settings.theme;
+            applyTranslations(settings.language);
+            
+            renderCurrentValuesEditor();
+            updateDashboard();
+
+            $('idealStrategy').addEventListener('input', (e) => {
+                if (e.target.classList.contains('strategy-input')) {
+                    handleStrategyInputChange(e.target.dataset.strategyKey, parseFloat(e.target.value) || 0, e.target);
+                }
+            });
+
+            $('currentValues').addEventListener('input', (e) => {
+                if (e.target.classList.contains('current-value-input')) {
+                    handleCurrentValueChange(e.target.dataset.key, parseFloat(e.target.value) || 0);
+                }
+            });
+            
+            document.querySelectorAll('.profile-btn').forEach(btn => btn.addEventListener('click', () => handleProfileChange(btn.dataset.profile)));
+            
+            $('reset-data').addEventListener('click', handleReset);
+        }
+
+    </script>
+</body>
+</html>
+
+Adicionar dashboard HTML
